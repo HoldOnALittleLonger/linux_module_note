@@ -1,0 +1,82 @@
+Linux Kernel Module Programming Guide
+
+Chapter 1 : Hello,world
+  a kernel module at least has two function :
+    init_module
+    cleanup_module
+
+    init_module will be registered into kernel,
+    cleanup_module will be called when module exit,and clean up(undo) all things what init_module did.
+
+  hello world :
+    #include<linux/kernel.h>
+    #include<linux/module.h>
+    #include<linux/init.h>
+    
+    MODULE_LICENSE("GPL");
+    MODULE_VERSION("v0.1");
+    MODULE_AUTHOR("who");
+    MODULE_DESCRIPTION("description");
+
+    int __init init_module(void)
+    {
+            printk(KERN_INFO "hello world!");
+	    return 0;
+    }
+
+    void __exit cleanup_module(void) {}
+
+    module_init(init_module);
+    module_exit(cleanup_module);
+
+  /*  in the older kernel version,init_module() and cleanup_module() will as the entrance and the
+   *  exit of module.
+   *  now,use kernel function module_init() to register an init function of module,
+   *  use kernel function module_exit() to register an exit function of module.
+   */
+
+  Makefile for kernel module :
+    because kernel module is  not an independent executable,but an object file which will be linked into the
+    kernel in runtime.
+    so the gcc option "-c" is necessary.
+
+    MODCFLAGS :
+      __KERNEL__
+        tell the header files that this code will be run in kernel mode,not as part of a user process.
+      MODULE
+        thell the header files to give the appropriate definitions for a kernel module.
+      LINUX
+        conditional compilation on the parts which are OS dependent.
+
+    the certain flags in header config.h,kernel was compiled with these flags.
+
+  Multiple file kernel modules :
+    1>  in all the source files but one,add the macro definition "#define __NO_VERSION__"
+    	normally,"module.h" use global variable "kernel_version" to record what is the kerne version this
+	module compiled for.
+	in the case of __NO_VERSION__ was defined,"module.h" wont include the header <version.h>.
+
+    2>  compile all the source files as usual.
+
+    3>  combine all object files into a single one.
+    	execute linker with the command
+	"ld -m elf_i386 -r -o <name of module>.o <1st source file>.o <2nd source file>.o ..."
+
+  /*  this is the old way to compile kernel module.currently,for compile kernel module,should use the
+   *  kernel Makefile which is in the path /lib/modules/`uname -r`/build .
+   */
+
+  the example of Makefile for a kernel module :
+    context :
+      
+      obj-m += <kernel module name>.o
+      <kernal module name>-objs += <1st dependence>.o ...
+      <kernal module name>-objs += <Xth dependence>.o ...
+      KBUILD_CFLAGS += <flags>
+      ...
+
+      all:
+          make -C /lib/modules/`uname -r`/build M=$(PWD) module
+      
+      clean:
+          make -C /lib/modules/`uname -r`/build M=$(PWD) clean
