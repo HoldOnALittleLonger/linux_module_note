@@ -80,3 +80,91 @@ Chapter 1 : Hello,world
       
       clean:
           make -C /lib/modules/`uname -r`/build M=$(PWD) clean
+
+
+Chapter 2 : Character Device Files
+  kernel module has two major ways to talk with processes.
+  one :
+    through device files(/dev).
+  two :
+    through proc file system.
+
+  device file is generated for processes let they are able to communicate with device drivers in the kernel,
+  through driver to communicate with physical devices.
+  each device driver which is responsible for some type of hardware,and assigned its own major number.
+
+  the file /proc/devices listed drivers and their major numbers,each physical device managed by a device driver
+  is assigned a minor number.
+
+  major number : type of hardware.
+  minor number : physical device is managed by the device driver.
+  
+
+  mknod :
+    create a device node.
+  
+  block devices have a buffer for requests,they can choose which order to respond.
+  block devices can only accept input and return output in blocks.
+
+  character devices and byte stream is alike,they can read any size of bytes and output as same.
+
+  what action to taken when a file is opened and requsted to do something have to through file_operation struct.
+  device file as same as use the file_operation struct to manipulate it.
+  if the device file is opened by some processes,have to prevent remove the module from kernel,because if ejected
+  it,but process calls the code in the old address registered by the kernel module,and it had been ejected,another
+  module code is installed into that address,then wrong is ocurred.
+
+  if the kernel module's reference count is not zero,then can not remove it from kernel.
+  the variable mod_use_count_ is used to record how many objects is using this module.
+  macro : MOD_INC_USE_COUNT , MOD_DEC_USE_COUNT can access that variable.
+  
+  in 2.6 kernel,module dont have to manage reference count by itself,new interfaces had been added.
+  <linux/module.h>
+    int try_module_get(struct module *);       //  inc module reference count
+    void module_put(struct module *module);    //  dec module reference count
+
+    struct module *find_module(const char *name);
+    unsigned int module_refcount(struct module *mod);
+
+      find a module via module @name.
+      retrive module reference count via module pointer.
+
+    struct module;
+      this struct represent the module in kernel.
+
+
+  LINUX_VERSION_NUMBER  -  current kernel version value.
+  KERNEL_VERSION()      -  macro function to compute the kernel version value.
+  			   for the special kernel version a.b.c
+			   this function returns (2^16) * a + (2^8) * b + c
+
+  <linux/fs.h>
+    int __register_chrdev(unsigned int major, unsigned int baseminor, unsigned int count,
+    			  const char *name, const struct file_operations *fops);
+    void __unregister_chrdev(unsigned int major, unsigned int baseminor, unsigned int cout,
+    	 	             const char *name);
+
+      __register_chrdev is used to register a character device,__unregister_chrdev is used to unregister device.
+      @major is major number
+      @baseminor is the first of the range of minor numbers
+      @count is the number of minor numbers required or the minor number the device is occupying
+      @name is the name in /dev
+      @fops is the associated file operations.
+
+    /*  object-oriented file operations  */
+    struct file_operations {
+    	   ...
+      	   ssize_t (*read) (struct file*, char __user *, size_t, loff_t *);
+      	   ssize_t (*write) (struct file*, const char __user *, size_t, loff_t *);
+      	   int (*open) (struct inode *, struct file *);
+      	   int (*release) (struct inode *, struct file *);
+	   ...
+    };
+
+  the method to get device's minor number in the case several physical device using the driver :
+    inode.i_rdev & 0xFF
+
+  !  must use preprocessing macro to compate older kernel
+
+
+
