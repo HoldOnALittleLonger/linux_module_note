@@ -167,4 +167,41 @@ Chapter 2 : Character Device Files
   !  must use preprocessing macro to compate older kernel
 
 
+Chapter 3 : The /proc File System
+  the another kernel modules to send information to processes is the /proc file system.
+  proc register dynamic is allow kernel to determine what inode the file to use.
+  for create a file in /proc,have to define a structure which contains all informations 
+  needed by /proc file system.
 
+  the structure saved informations needed by /proc is defined in header <linux/proc_fs.h>.
+
+  typedef int (read_proc_t)(char *page, char **start, off_t off, int count, int *eof,
+  	      		    void *data);
+  typedef int (write_proc_t)(struct file *file, const char __user *buffer, unsigned long count,
+  	      		     void *data);
+  struct proc_dir_entry {
+  	 unsigned int low_ino;  /*  lower inode number,0 means dynamic  */
+  	 ...
+	 uid_t uid;
+	 gid_t gid;
+	 loff_t size;
+	 const struct inode_operations *proc_iops;
+	 const struct file_operations *proc_fops;
+	 ...
+	 read_proc_t *read_proc;
+	 write_proc_t *write_proc;
+	 atomic_t count;
+	 ....
+  };
+
+  as usually,the global variable proc_root is the root dentry /proc .
+  in the kernel 2.6.34, proc_regiser and proc_unregister primitives becomes static function in
+  fs/proc/generic.c ,for register proc entry,have to use these functions :
+
+    struct proc_dir_entry *create_proc_entry(const char *name, mode_t mode, struct proc_dir_entry *parent);
+    void remove_proc_entry(const char *name, struct proc_dir_entry *parent);
+    struct proc_dir_entry *create_proc_data(const char *name, mode_t mode, struct proc_dir_entry *parent,
+    	   		  		    const struct file_operations *proc_fops, void *data);
+  
+  create proc_dir_entry object when module is initializing,and remove the proc_dir_entry object when module
+  is exiting.
