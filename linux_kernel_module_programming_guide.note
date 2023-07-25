@@ -193,6 +193,14 @@ Chapter 3 : The /proc File System
 	 atomic_t count;
 	 ....
   };
+  /*  read_proc will be called by __proc_file_read(),this function is called by proc_file_read().
+   *  and function proc_file_read() is the default method in proc_fops for reading.
+   *  write_proc will be called by proc_file_write(),this function is the default method in proc_fops for
+   *  writing.
+   *  function create_proc_read_entry() receives a read_proc object,and sets it to proc_dir_entry.read_proc.
+   *  read_proc and write_proc are the user-defined routines for read or write proc file,but of course,
+   *  client have not to use the default functions to read or write proc files.
+   */
 
   as usually,the global variable proc_root is the root dentry /proc .
   in the kernel 2.6.34, proc_regiser and proc_unregister primitives becomes static function in
@@ -200,8 +208,55 @@ Chapter 3 : The /proc File System
 
     struct proc_dir_entry *create_proc_entry(const char *name, mode_t mode, struct proc_dir_entry *parent);
     void remove_proc_entry(const char *name, struct proc_dir_entry *parent);
-    struct proc_dir_entry *create_proc_data(const char *name, mode_t mode, struct proc_dir_entry *parent,
+    struct proc_dir_entry *proc_create_data(const char *name, mode_t mode, struct proc_dir_entry *parent,
     	   		  		    const struct file_operations *proc_fops, void *data);
+
+    /*  proc_create_data() will sets proc_dir_entry.data = data, proc_dir_entry.proc_fops = proc_fops  */
   
   create proc_dir_entry object when module is initializing,and remove the proc_dir_entry object when module
   is exiting.
+
+
+Chapter 4 : Using /proc For Input
+  for create a proc directory entry,have to use struct proc_dir_entry to represent the object.
+  but it do not contain write function,because /proc is used to report kernel situation to processes.
+  there is a way to allow write /proc file entry that is use filesystem mechanism.
+
+  <linux/fs.h>
+  struct inode_operations;
+  struct file_operations;
+
+    inode_operations contains all the functions kernel vfs aksed the filesystem have to implements.
+    these operations is used to manipulate inode object.
+    file_operations is same as inode_operations,but these operations is used to manipulate file object.
+      (the different between the two is that file operations deal with the file itself,and inode operations
+       deal with ways of referencing the file,such as creating links to it.)
+
+  so the special proc_iops and proc_fops members allow to write /proc/entry.
+
+  but have to notice read functions are used for output,write functions are used for input,the reason is
+  that read and write refer to the user's point of view - if a process reads something from the kernel,
+  then kernel needs to output it,and if a process writes something to the kernel,then kernel receives
+  it as input.
+
+  another point have to notice,that is,kernel land and user land has different memory area.
+  a lot of kernel function just manipulate kernel memory not userland memory.
+  for example :
+    vfs_read() function will checks where the @buffer from.
+    __user compiler attribute required the memory this pointer points to should be a userland memory,
+    vfs_read() will checks if that true.
+
+    function set_fs() and get_fs() are used to change memory segment checking behavior.
+    there has two possible value :
+      KERNEL_DS
+      USER_DS
+
+      KERNEL_DS disable userland memory segment checking in kernel land.
+      USER_DS enable userland memory segment checking in kernel land.
+
+      /*  these function is declared in <asm/uaccess.h>  */
+
+  function copy_to_user() is used to output something to userland,@buffer have to be a pointer points to
+  userland memory segment.
+  function copy_from_user() is used to input something from userland,@buffer have to be a pointer points to
+  userland memory segment.
