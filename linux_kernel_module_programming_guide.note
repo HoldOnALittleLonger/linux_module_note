@@ -260,3 +260,64 @@ Chapter 4 : Using /proc For Input
   userland memory segment.
   function copy_from_user() is used to input something from userland,@buffer have to be a pointer points to
   userland memory segment.
+
+
+Chapter 5 : Talking to Device Files (writes and IOCTLs)
+  almost device drivers has been implemented ioctl function,client can use ioctl function to make 
+  communication with devices.
+  the entry under /dev is known as device file,and it is supposed to represent physical device.
+  open a device file and read from it is input,
+  open a device file and write to it is output.
+  but more useful method is use ioctl function.
+
+  generally,ioctl() is called with three parameters :
+    1>  the file descriptor of the appropriate device file
+    2>  the ioctl number
+    3>  a parameter which is of type long
+
+    @ioctl_number encodes the major device number,the type of the ioctl,the command,and the type of the @parameter.
+    when add a new ioctl into kernel,have to use the macros defined in <linux/ioctl.h> :
+      _IO     an ioctl with no parameters
+      _IOW    an ioctl with write parameters  (copy_from_user)
+      _IOR    an ioctl with read parameters   (copy_to_user)
+      _IOWR   an ioctl with both write and read parameters 
+
+      @first_arg for these macros is an identify letter or number from the table(defined in Documentation/ioctl/ioctl-number.txt)
+      @second_arg for these macros is a sequence number
+      @third_arg for these macros is the type of the data going into the kernel or coming out the kernel
+
+  usage description :
+    device file also has a file_operations structure is associated with it.
+    file_operations.read represent the function used to read file
+    file_operations.write represent the function used to write file
+    file_operations.ioctl represent the function used to be called when process calls ioctl on it
+    file_operations.open represent the function used to open file
+    file_operations.close represent the function used to close file
+    create a file_operations object,and associated it with a device file via __register_chardev(),
+    now process under userland could calls ioctl() to communicate with the module(the device file).
+
+    Steps :
+      1>  define device_read()
+      	    it is alike at generic file read function.
+      2>  define device_write()
+      	    it is alike at generic file write function.
+
+      /*  have to notice that the @buffer is userland memory segment  */
+
+      3>  define device_ioctl()
+      	    if it supports several command(ioctl_number),then have to deal with all situation via
+	    if expression or switch expression.
+	    command matching have to use this form  _IO<What>(MAJOR_NUMBER, SEQUENCE_NUMBER, TYPE),
+	    command macro is defined by _IO macros via different SEQUENCE_NUMBER and TYPE.
+
+      /*  attention,the role for read is get something from outside(maybe just kernel land) and
+       *  return to user process,
+       *  the role for write is get something from user process and output.
+       */
+
+      4>  define device_open()
+      	    similar to generic open.
+      5>  define device_release()
+      	    similar to generic close.
+
+  /*  ioctl mechanism is too older,and too complicate for user process,so not recommend use it  */
