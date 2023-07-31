@@ -321,3 +321,111 @@ Chapter 5 : Talking to Device Files (writes and IOCTLs)
       	    similar to generic close.
 
   /*  ioctl mechanism is too older,and too complicate for user process,so not recommend use it  */
+
+
+Chapter 6 : Startup Parameters
+  define global variables in the kernel module and insmod will fill them.
+  kernel version 2.0 does not check variable type,generally use string pointer points to the 
+  module parameter.
+  kernel version 2.2 use macro MACRO_PARM to tell insmod that expect a parameters,its name and its type.
+
+  e.g.
+    char *str1, *str2;
+    MODULE_PARM(str1, "s");
+    MODULE_PARM(str2, "s');
+
+  in newer version(since 2.6),macro_parm is MACRO_PARM.and has new proto.
+    <linux/moduleparam.h>
+    #define macro_parm(name, type, permission)
+
+    @name is the name of the variable
+    @type is the type of the variable
+    @permission is the R | W permissions of variable
+
+  for pass arguments to kernel module have to use this form of insmod or modprobe :
+    insmod <module> <variable_name>=<variable_argument> ...
+    modprobe <module> <variable_name>=<variable_argument> ...
+
+  if no arguments were past,then kernel use the default value for the variables.
+  use bootargs to set module argument at the situation that module is inside kernel
+  and U-boot boot the kernel.
+
+  /*  under C the object file only has the location of global variables,not their type,
+      that is why header files are necessary.  */
+
+
+Chapter 7 : System Calls
+  in linux or unix,the only one way to legally fall into kernel from userland that is SystemCall.
+  if system is running under protect mode,then user process is not allowed to access kernel memory,
+  so they can not calls kernel functions.kernel use CPU flag registers to implement this.
+  but there is an exception that is SystemCall,if userland process wants kernel to provide some 
+  services,it have to use SystemCall.
+
+  Intel x86 CPU,soft interrupt will triggers SystemCall,interrupt number is 0x80.
+  and EAX saves the SystemCall number,
+  @p1 in EBX
+  @p2 in ECX
+  @p3 in EDX
+  @p4 in ESI
+  @p5 in EBP
+  @return in EAX
+
+  /*  if there is more than five arguments were existed,have to save them in continuous units,and
+   *  save the header pointer in EBX.
+   */
+
+  (Intel x86 does not use stack to passing arguments)
+  but kernel SystemCall often added asmlinkage flag,that means all parameter gets from stack,
+  so use push instruction to push argument into stack,order is from right to left.
+
+  (Intel x86_64 does not use stack,too)
+  RAX RDI RSI RDX RCX R8 R9
+  @n  @1  @2  @3  @4  @5 @6
+  @ret
+
+  if developer wants to change the behavior of system,syscall is the suit place to set some traps.
+  linux syscall will check sys_call_table to get SystemCall function's address.
+  for change the behavior of a syscall,should let the unit in sys_call_table which contains the custom code
+  instead of original syscall function.(it is known as syscall hook,there are another ways to implement that)
+  	     	      	      	       (i.e. VFS hook)
+
+  use kernel module to implement it,when module is insert,the syscall would be changed,and when the kernel module
+  is exit,it must to restore the original syscall,otherwise,that will leave system in an unstable state.
+  how to gets the address of sys_call_table in kernel has several methods,i.e. kallsyms_lookup_name(@name)
+
+  this approach is dangerous,because of the possibility of two kernel modules changing the same system call.
+  (change behavior of syscall is still dangerous)
+    module A and module B
+    A hook syscall sys_open to custom code,after it is finished,calls the original syscall
+    B hook syscall sys_open to custom code,after it is finished,calls the original syscall
+
+    A insert
+    sys_open -> A_open
+    B insert
+    sys_open(A_open) -> B_open
+
+    B remove first
+    sys_open(A_open) -> B_open -> sys_open(A_open)
+    A remove
+    sys_open(A_open) -> original_sys_open
+
+    A remove first
+    sys_open(A_open) -> original_sys_open
+    B remove
+    sys_open(B_open) -> sys_open(A_open)  /*  but A_open is no longer existed,system crash  */
+
+    sovle :
+      A and B checks if sys_call_table[_NR_open] == Custom_open,do nothing in false,restore in true.
+
+      but this cause even worse problem :
+        when A is removed,it sees that the system call was changed to B open so that it is no longer pointing
+	to A open,so it(A) won't restore it to sys_open before it is removed from memory,but B_open will still
+	try to call A open which is no longer there,so that even without removing B the system would crash.
+
+      prevent this :
+        1>  restore the call to the original value sys_open,but this request address of sys_open is have been known
+	2>  use the reference count to prevent root from rmmod the module once it is loaded
+	    (A is referred by B,so reference count is not equal to zero)
+	    (  A ->  B  )
+
+
