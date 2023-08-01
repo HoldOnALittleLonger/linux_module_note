@@ -429,3 +429,59 @@ Chapter 7 : System Calls
 	    (  A ->  B  )
 
 
+Chapter 8 : Blocking Processes
+  the generally way to let user process going to sleep that is change process state to TASK_INTERRUPTIBLE and then 
+  give up CPU time,do this via calls schedule().
+  but the process have to be waken up when the expected event is came in,so must put the process into a wait queue.
+  the wait queue will be checked at next scheduling,if the expected event is satisfied,then scheduler will wake up
+  all processes in this wait queue.(there is no way to wake up the special one of these processes)
+
+  in version 2.6,the old interfaces interruptible_sleep_on() etc,should not be used at current version.
+  new interfaces wait_event() have been instead them.
+  <linux/wait.h>
+    /*  wait_event - sleep until a condition gets true  
+     *               this interface will leaves process state in TASK_UNINTERRUPTIBLE
+     *  @wq : the wait queue,it is an object of type struct wait_queue_t.
+     *  @condition : the expected event.
+     *  retunr - no return value.
+     */
+    #define wait_event(wq, condition)
+
+    /*  wait_event_interruptible - sleep until a condition gets true
+     *                             this interface is same as wait_event,but it is interruptible,
+     *                             that is leave process state in TASK_INTERRUPTIBLE.
+     *  @wq : wait queue
+     *  @condition : the expected condition
+     *  return - a int value
+     */
+    #define wait_event_interruptible(wq, condition)
+
+  wait queue structure is defined in <wait.h>,in version 2.6,it is defined with this structure :
+  <linux/wait.h>
+    typedef struct __wait_queue wait_queue_t;
+    typedef int (*wait_queue_func_t)(wait_queue_t *wait, unsigned mode, int flags, void *key)
+    struct __wait_queue {
+            unsigned int flags;
+    #define WQ_FLAG_EXCLUSIVE   0x01
+  	    void *private;
+	    wait_queue_func_t func;
+	    struct list_head task_list;	    
+    }
+
+    #define wake_up(x)  __wake_up(x, TASK_NORMAL, 1, NULL);
+    ...
+
+    /*  wait_queue_func_t object will be called at the time wake_up() is called on the wait queue @x,
+     *  @key will be passed by __wake_up().
+     *  if the condition for the wait_queue_t @x is satisfy,then producer have to calls wake_up(@x)
+     *  to wake up processes waiting to this condition.
+     *  __wake_up() is defined in <kernel/sched.c>
+     */
+
+  signal is also wakes up process,so that,if signal_pending(current) is true,then wait_event_interruptible()
+  would be fault,and returns -ERESTARTSYS.
+
+  this chapter created a proc entry named sleep,and use a global variable to records if the file is opened by
+  a process,if it is,then all processes try to open file will be block(via module_interruptible_sleep_on()) until
+  open counter becomes zero.
+
