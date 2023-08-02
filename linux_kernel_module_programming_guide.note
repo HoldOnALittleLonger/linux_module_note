@@ -485,3 +485,156 @@ Chapter 8 : Blocking Processes
   a process,if it is,then all processes try to open file will be block(via module_interruptible_sleep_on()) until
   open counter becomes zero.
 
+
+Chapter 9 : Replacing printk's
+  generally,linux kernel code output messages through printk() function,but sometimes,maybe need to send messages to
+  the tty associated with current process.it is a useful way to debug of send some informations to user.(kernel does not
+  suggest read or write a file in kernel space)
+  but tty has too many types be there,and should not mix X and kernel module programming,this is an important point have
+  to pay attention.
+
+  the way to operates a tty object is the structure tty_operations.
+  <linux/tty.h>
+    struct tty_struct {
+            int magic;
+	    struct kref kref;
+	    struct tty_driver *driver;
+	    const struct tty_operations *ops;
+	    int index;
+	    ...
+    };
+    /*  linux use this struct to represents a tty object  */
+
+  <linux/tty_driver.h>
+    struct tty_operations {
+            struct tty_struct *(*lookup)(struct tty_driver *driver, struct inode *inode, int idx);
+	    ...
+	    int (*write)(struct tty_struct *tty, const unsigned char *buf, int count);
+	    ...
+    };
+    /*  this structure does not contains reading function,that is tty is used to output,not a input device  */
+
+  xterm is the tty of X system,it also use these structure to be represented.
+  for get the tty is associated with current process,have to use macro "current" to get task_struct of this process,
+  the member tty is a pointer points to current tty.
+
+  e.g.
+    struct tty_struct *ts = NULL;
+    ts = current->tty;
+    ts->ops->write(ts, buffer, length);
+
+  /*  kref is the generic reference counter in kernel  */
+
+
+Chapter 10 : Scheduling Tasks
+  for scheduling a task in kernel,there has two possibility ways.
+    1>  use crontab daemon.  /*  crond  */
+    	  a process start kernel module via a special way at the certain time.
+    2>  use workqueue.  /*  such interfaces in the version older than 2.6 is tq_struct  */
+          do not need any another process to start task,just put task in a workqueue.
+	  this can not request system executes the work at the certain time,because workqueue
+	  is the mechanism used by interrupting behalf part.
+	  but workqueue allows sleeping and running in process context.(tasklet is different)
+
+  <linux/workqueue.h>
+    struct work_struct;
+    typedef void (*work_func_t)(struct work_struct *work);
+
+    struct work_struct {
+            atomic_long_t data;
+    #define WORK_STRUCT_PENDING 0
+    #define WORK_STRUCT_STATIC 1
+    #define WORK_STRUCT_FLAG_MASK (3UL)
+    #define WORK_STRUCT_WQ_DATA_MASK (~WORK_STRUCT_FLAG_MASK)
+            struct list_head entry;
+	    work_func_t func;
+    #ifdef CONFIG_LOCKDEP
+    	    struct lockdep_map lockdep_map;
+    #endif	    
+    };
+
+    /*  every work_struct object represents a unqueue work  */
+    /*  @func would be executed when the work is scheduled  */
+
+  <kernel/workqueue.c>
+    struct cpu_workqueue_struct {
+            spinlock_t lock;
+	    struct list_head worklist;
+	    wait_queue_head_t more_work;      /*  condition if there has more work is inserted  */
+	    struct work_struct *current_work; /*  current work is ready to running or is running  */
+	    struct workqueue_struct *wq;      /*  associated workqueue  */
+	    struct task_struct *thread;	      /*  the worker thread for executes work  */
+    } ____cacheling_aligned;
+
+    struct workqueue_struct {
+            struct cpu_workqueue_struct *cpu_wq;  /*  associated cwq  */
+	    struct list_head list;
+	    const char *name;  /*  workqueue name  */
+	    int singlethread;  /*  is the cpu single thread  */
+	    int freezeable;
+	    int rt;
+    #ifdef CONFIG_LOCKDEP
+            struct lockdep_map lockdep_map;
+    #endif	    
+    };
+
+    /*  queue_work - queue a work to workqueue
+     *  @wq : the workqueue object pointer.
+     *  @work : the work.
+     *  return - 0 if @work is already on a queue,non-zero otherwiser.
+     */
+    int queue_work(struct workqueue_struct *wq, struct work_struct *work);
+
+      procedure >
+        queue_work ->
+          queue_work_on ->
+	    __queue_work ->
+	      insert_work ->
+	        list_add_tail AND wake_up(&cwq->more_work)
+
+    /*  __create_workqueue_key - create a workqueue with key
+     *  @name : workqueue name.
+     *  @singlethread : singlethread field.
+     *  @freezeable : freezeable field.
+     *  @rt : rt field.
+     *  @key : key argument for lockdep_init_map.
+     *  @lock_name : name argument for lockdep_init_map,lockdep_map field will be
+     *               initialized by lockdep_init_map().
+     *  return - reutrn a workqueue_struct pointer if succeed,return NULL otherwise.
+     */
+    struct workqueue_struct *__create_workqueue_key(const char *name, int singlethread, int freezeable, int rt,
+    	   		    			    struct lock_class_key *key, const char *lock_name);
+
+      procedure >
+        alloc structure memory -> alloc percpu data ->
+	init lockdep_map -> set field values ->
+	init_cpu_workqueue -> create_workqueue_thread ->
+	start_workqueue_thread
+
+	init_cpu_workqueue() will init cpu_workqueue_struct.
+	create_workqueue_thread() will create a kernel thread with the function worker_thread defined in
+	<kernel/workqueue.c>,and set cpu_workqueue_struct.thread points to it.
+	start_workqueue_thread() has these codes :
+	  if (p->thread) {
+	          if (cpu >= 0)
+		          kthread_bind(p, cpu);
+	          wake_up_process(p);		  
+	  }
+
+    worker_thread() is a function which process a endless loop(if kthread should not be stop or no schedule() is called),
+    and calls run_workqueue().
+    run_workqueue() extract work from cpu_workqueue_struct,and calls list_del_init(head.next) to delete current work from
+    cpu_workqueue,then calls f(work) to executes real work.
+
+  /*  destroy a workqueue via destroy_workqueue()  */
+  /*  cancel a pending work via cancel_delayed_work()  */
+
+  because linux splited interrupting to two parts,so if want work is executed at every timer interrupt,have to register timer irq
+  and put really work in workqueue mechanism.(another has soft irq and tasklet)
+
+
+    	   		    				
+
+
+  
+
