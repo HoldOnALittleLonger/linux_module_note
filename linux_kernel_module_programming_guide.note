@@ -633,8 +633,142 @@ Chapter 10 : Scheduling Tasks
   and put really work in workqueue mechanism.(another has soft irq and tasklet)
 
 
+Chapter 11 : Interrupt Handlers
+  the jobs of kernel is not only communicates with processes,and it must communicates with the hardwares were connected to this
+  machine as well.
+  there are two types of interaction between the CPU and the rest of the computer's hardware.
+    1>  when the CPU gives orders to the hardware,the other is when the hardware needs to tell the CPU something.
+    2>  called interrupts,is much harder to implement because it has to be dealt with when convenient for hardware,not the CPU.
+
+  IRQ : hardware interrupt under Unix or Linux.
+  there are two types of IRQs :
+    1>  a short IRQ is one which is expected to take a very short period of time,during which the rest of the machine will be
+    	blocked and no other interrupts will be handled.
+    2>  a long IRQ is one which can take longer,and during which other interrupts may occur(but not interrupts from the same device).
+
+  if at all possible,should design long interrupt as well.
+  (IRQ will interrupts CPU's work,but IRQ has ranking and lower level IRQ can be interrupted by another higher level IRQ)
+  when CPU is interrupted,it will saves current work's info to stack and deal with interrupt.
+
+  Linux splits interrupt to two parts,the top half and bottom half.
+  top half :
+    do some important works then return.(short,and have to be done immediately)
+  bottom half :
+    deal with some time insensitive works.(long,and the works will take more times than top half)
+
+  top half is interrupt context,forbid sleeping.
+  bottom half is process context and permit sleeping.(bh will be scheduled)
+
+  !!  IRQ does not exist its own stack,it will share the stack of interrupted task.
+
+  in new version kernel(2.6),BH has three ways to deal with.
+    1>  soft irq (request predefined in kernel)
+    2>  tasklet  (based soft irq,do not need predefined)
+    3>  work queue
+
+  <linux/irqreturn.h>
+    typedef enum irqreturn irqreturn_t;
+  <linux/interrupt.h>
+    typedef irqreturn_t (*irq_handler_t)(int, void *);
+
+    /*  request_irq - register a IRQ.
+     *  @irq : irq number.
+     *  @handler : irq handler when this IRQ is came in.
+     *  @flags : irq handling routine flags.
+     *  @name : char pointer points to a string which would show in /proc/interrupts
+     *  @dev : device identifier.
+     *  return - return zero if succeed,return non-zero otherwise.
+     */
+    int __must_check request_irq(unsigned int irq, irq_handler_t handler, unsigned long flags,
+    		                 const char *name, void *dev);
+
+    flags :
+      IRQF_DISABLED		keep irqs dsiabled when calling the action handler
+      IRQF_SAMPLE_RANDOM	irq is used to feed the random generator
+      IRQF_SHARED		allow sharing the irq among several devices
+      IRQF_PROBE_SHARED		set by callers when they expect sharing mismatches to occur
+      IRQF_TIMER		flag to mark this interrupt as timer interrupt
+      IRQF_PERCPU		interrupt is per cpu
+      IRQF_NOBALANCING		flag to exclude this interrupt from irq balancing
+      IRQF_IRQPOLL		interrupt is used for polling (only the interrupt that is 
+      				registered first in an shared interrupt is considered for 
+				performance reasons)
+      IRQF_ONESHOT		interrupt is not reenabled after the harding handler finished.
+      				used by threaded interrupts which need to keep the irq line 
+				disabled until the threaded handler has been run.
+
+    /*  used by threaded handlers  */				
+    enum {
+            IRQTF_RUNTHREAD,    /*  signals that the interrupt handler thread should run  */
+	    IRQTF_DIED,		/*  handler thread died  */
+	    IRQTF_WARNED,	/*  warning "IRQ_WAKE_THREAD w/o thread_fn" has been printed  */
+	    IRQTF_AFFINITY,	/*  irq thread is requested to adjust affinity  */
+    };
+
+    /*  struct irqaction - per interrupt action descriptor.
+     *  @handler : interrupt handler function
+     *  @flags : flags
+     *  @name : name of the device
+     *  @dev_id : cookie to identify the device
+     *  @next : pointer to the next irqaction for shared interrupts
+     *  @irq : interrupt number
+     *  @dir : pointer to the proc/irq/NN/name entry
+     *  @thread_fn : interrupt handler function for threaded interrupts
+     *  @thread : thread pointer for threaded interrupts
+     *  @thread_flags : flags related to @thread
+     */
+    struct irqaction {
+            irq_handler_t handler;
+	    unsigned long flags;
+	    const char *name;
+	    void *dev_id;
+	    struct irqaction *next;
+	    int irq;
+	    struct proc_dir_entry *dir;
+	    irq_handler_t thread_fn;
+	    struct task_struct *thread;
+	    unsigned long thread_flags;
+    };	    
+    /*  every registed irq will be decribed with a struct irqaction object  */
+
+  the general IRQ steps :
+    driver module registers irq ->
+    driver enter sleeping to wait irq ->
+    irq came in ->
+    CPU interrupted ->
+    control hand over to kernel ->
+    kernel calls do_IRQ ->
+    the irq handler on this irq line would be executed ->  (if the irq line is shared,then 
+    	    	       	    	     	      	       	    every handler will be executed,and each one
+							    must checks whether the irq should be dealt
+							    with by it)
+    handler done some works immediately(top half),
+    and arranges BH works,then return to interrupted task ->
+    system scheduler schedules bottom half work fro that irq
+
+  /*  if a irq is registered,it will be actived as longer until reboot or call free_irq() to free it proactively  */
+
     	   		    				
+Chapter 12 : Symmetrical Multi-Processing(SMP)
+  asymmetrical multi-processing effectively requires specialized knowledge about the tasks the computer should do,
+  it is more difficult than SMP,and which is unavailable in a general purpose operating system such as Linux.
+  In a SMP environment,the CPUs share the same memory,and as a result code running in once CPU can affect the memory
+  used by another.
+  a process will normally only run on one CPU at a time,the kernel,could be called by different processes running on
+  different CPUs.but there must have some synchronise mechanisms to guarantee system safe.(big kernel lock is very
+  inefficient)
+
+  /*  threaded processes can run on several CPUs at once,meaning it is safe to use it with SMP  */
 
 
-  
+Chapter 13 : Common Pitfalls
+  there are some important things have to pay attention while writing a kernel module :
+    1>  Using standard libraries.
+    	stdlib is unavailable inside kernel,only exported kernel function is available.
+    2>  disabling interrupts.
+        sometimes,might need to disable interrupt for a short time,but must enable them afterwards.
+    3>  sticking head inside a large carnivore.
+    	that is,when write a kernel module,must take a care about how does the module affect system.
+	kernel debugging is very difficult and complicated.
 
+/*  END  */
