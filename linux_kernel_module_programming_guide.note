@@ -21,7 +21,7 @@ Chapter 1 : Hello,world
     int __init init_module(void)
     {
             printk(KERN_INFO "hello world!");
-	    return 0;
+        return 0;
     }
 
     void __exit cleanup_module(void) {}
@@ -52,15 +52,15 @@ Chapter 1 : Hello,world
 
   Multiple file kernel modules :
     1>  in all the source files but one,add the macro definition "#define __NO_VERSION__"
-    	normally,"module.h" use global variable "kernel_version" to record what is the kerne version this
-	module compiled for.
-	in the case of __NO_VERSION__ was defined,"module.h" wont include the header <version.h>.
+        normally,"module.h" use global variable "kernel_version" to record what is the kerne version this
+        module compiled for.
+        in the case of __NO_VERSION__ was defined,"module.h" wont include the header <version.h>.
 
     2>  compile all the source files as usual.
 
     3>  combine all object files into a single one.
-    	execute linker with the command
-	"ld -m elf_i386 -r -o <name of module>.o <1st source file>.o <2nd source file>.o ..."
+        execute linker with the command
+    "ld -m elf_i386 -r -o <name of module>.o <1st source file>.o <2nd source file>.o ..."
 
   /*  this is the old way to compile kernel module.currently,for compile kernel module,should use the
    *  kernel Makefile which is in the path /lib/modules/`uname -r`/build .
@@ -98,7 +98,6 @@ Chapter 2 : Character Device Files
 
   major number : type of hardware.
   minor number : physical device is managed by the device driver.
-  
 
   mknod :
     create a device node.
@@ -123,11 +122,8 @@ Chapter 2 : Character Device Files
     int try_module_get(struct module *);       //  inc module reference count
     void module_put(struct module *module);    //  dec module reference count
 
-    struct module *find_module(const char *name);
-    unsigned int module_refcount(struct module *mod);
-
-      find a module via module @name.
-      retrive module reference count via module pointer.
+    struct module *find_module(const char *name);      // find a module via module @name.
+    unsigned int module_refcount(struct module *mod);  // retrieve module reference count via module pointer.
 
     struct module;
       this struct represent the module in kernel.
@@ -135,14 +131,14 @@ Chapter 2 : Character Device Files
 
   LINUX_VERSION_NUMBER  -  current kernel version value.
   KERNEL_VERSION()      -  macro function to compute the kernel version value.
-  			   for the special kernel version a.b.c
-			   this function returns (2^16) * a + (2^8) * b + c
+                           for the special kernel version a.b.c
+                           this function returns (2^16) * a + (2^8) * b + c
 
   <linux/fs.h>
     int __register_chrdev(unsigned int major, unsigned int baseminor, unsigned int count,
-    			  const char *name, const struct file_operations *fops);
+                          const char *name, const struct file_operations *fops);
     void __unregister_chrdev(unsigned int major, unsigned int baseminor, unsigned int cout,
-    	 	             const char *name);
+                             const char *name);
 
       __register_chrdev is used to register a character device,__unregister_chrdev is used to unregister device.
       @major is major number
@@ -153,12 +149,12 @@ Chapter 2 : Character Device Files
 
     /*  object-oriented file operations  */
     struct file_operations {
-    	   ...
-      	   ssize_t (*read) (struct file*, char __user *, size_t, loff_t *);
-      	   ssize_t (*write) (struct file*, const char __user *, size_t, loff_t *);
-      	   int (*open) (struct inode *, struct file *);
-      	   int (*release) (struct inode *, struct file *);
-	   ...
+            ...
+             ssize_t (*read) (struct file*, char __user *, size_t, loff_t *);
+             ssize_t (*write) (struct file*, const char __user *, size_t, loff_t *);
+             int (*open) (struct inode *, struct file *);
+             int (*release) (struct inode *, struct file *);
+             ...
     };
 
   the method to get device's minor number in the case several physical device using the driver :
@@ -176,22 +172,22 @@ Chapter 3 : The /proc File System
   the structure saved informations needed by /proc is defined in header <linux/proc_fs.h>.
 
   typedef int (read_proc_t)(char *page, char **start, off_t off, int count, int *eof,
-  	      		    void *data);
+                            void *data);
   typedef int (write_proc_t)(struct file *file, const char __user *buffer, unsigned long count,
-  	      		     void *data);
+                             void *data);
   struct proc_dir_entry {
-  	 unsigned int low_ino;  /*  lower inode number,0 means dynamic  */
-  	 ...
-	 uid_t uid;
-	 gid_t gid;
-	 loff_t size;
-	 const struct inode_operations *proc_iops;
-	 const struct file_operations *proc_fops;
-	 ...
-	 read_proc_t *read_proc;
-	 write_proc_t *write_proc;
-	 atomic_t count;
-	 ....
+          unsigned int low_ino;  /*  lower inode number,0 means dynamic  */
+          ...
+          uid_t uid;
+          gid_t gid;
+          loff_t size;
+          const struct inode_operations *proc_iops;
+          const struct file_operations *proc_fops;
+          ...
+          read_proc_t *read_proc;
+          write_proc_t *write_proc;
+          atomic_t count;
+          ....
   };
   /*  read_proc will be called by __proc_file_read(),this function is called by proc_file_read().
    *  and function proc_file_read() is the default method in proc_fops for reading.
@@ -209,7 +205,7 @@ Chapter 3 : The /proc File System
     struct proc_dir_entry *create_proc_entry(const char *name, mode_t mode, struct proc_dir_entry *parent);
     void remove_proc_entry(const char *name, struct proc_dir_entry *parent);
     struct proc_dir_entry *proc_create_data(const char *name, mode_t mode, struct proc_dir_entry *parent,
-    	   		  		    const struct file_operations *proc_fops, void *data);
+                                            const struct file_operations *proc_fops, void *data);
 
     /*  proc_create_data() will sets proc_dir_entry.data = data, proc_dir_entry.proc_fops = proc_fops  */
   
@@ -229,8 +225,8 @@ Chapter 4 : Using /proc For Input
     inode_operations contains all the functions kernel vfs aksed the filesystem have to implements.
     these operations is used to manipulate inode object.
     file_operations is same as inode_operations,but these operations is used to manipulate file object.
-      (the different between the two is that file operations deal with the file itself,and inode operations
-       deal with ways of referencing the file,such as creating links to it.)
+    (the different between the two is that file operations deal with the file itself,and inode operations
+     deal with ways of referencing the file,such as creating links to it.)
 
   so the special proc_iops and proc_fops members allow to write /proc/entry.
 
@@ -265,7 +261,7 @@ Chapter 4 : Using /proc For Input
 Chapter 5 : Talking to Device Files (writes and IOCTLs)
   almost device drivers has been implemented ioctl function,client can use ioctl function to make 
   communication with devices.
-  the entry under /dev is known as device file,and it is supposed to represent physical device.
+  the entry under /dev is known as a device file,and it is supposed to represent physical device.
   open a device file and read from it is input,
   open a device file and write to it is output.
   but more useful method is use ioctl function.
@@ -298,17 +294,17 @@ Chapter 5 : Talking to Device Files (writes and IOCTLs)
 
     Steps :
       1>  define device_read()
-      	    it is alike at generic file read function.
+              it is alike at generic file read function.
       2>  define device_write()
-      	    it is alike at generic file write function.
+              it is alike at generic file write function.
 
       /*  have to notice that the @buffer is userland memory segment  */
 
       3>  define device_ioctl()
-      	    if it supports several command(ioctl_number),then have to deal with all situation via
-	    if expression or switch expression.
-	    command matching have to use this form  _IO<What>(MAJOR_NUMBER, SEQUENCE_NUMBER, TYPE),
-	    command macro is defined by _IO macros via different SEQUENCE_NUMBER and TYPE.
+              if it supports several command(ioctl_number),then have to deal with all situation via
+              if expression or switch expression.
+              command matching have to use this form  _IO<What>(MAJOR_NUMBER, SEQUENCE_NUMBER, TYPE),
+              command macro is defined by _IO macros via different SEQUENCE_NUMBER and TYPE.
 
       /*  attention,the role for read is get something from outside(maybe just kernel land) and
        *  return to user process,
@@ -316,9 +312,9 @@ Chapter 5 : Talking to Device Files (writes and IOCTLs)
        */
 
       4>  define device_open()
-      	    similar to generic open.
+              similar to generic open.
       5>  define device_release()
-      	    similar to generic close.
+              similar to generic close.
 
   /*  ioctl mechanism is too older,and too complicate for user process,so not recommend use it  */
 
@@ -387,7 +383,7 @@ Chapter 7 : System Calls
   linux syscall will check sys_call_table to get SystemCall function's address.
   for change the behavior of a syscall,should let the unit in sys_call_table which contains the custom code
   instead of original syscall function.(it is known as syscall hook,there are another ways to implement that)
-  	     	      	      	       (i.e. VFS hook)
+                                          (i.e. VFS hook)
 
   use kernel module to implement it,when module is insert,the syscall would be changed,and when the kernel module
   is exit,it must to restore the original syscall,otherwise,that will leave system in an unstable state.
@@ -419,14 +415,14 @@ Chapter 7 : System Calls
 
       but this cause even worse problem :
         when A is removed,it sees that the system call was changed to B open so that it is no longer pointing
-	to A open,so it(A) won't restore it to sys_open before it is removed from memory,but B_open will still
-	try to call A open which is no longer there,so that even without removing B the system would crash.
+    to A open,so it(A) won't restore it to sys_open before it is removed from memory,but B_open will still
+    try to call A open which is no longer there,so that even without removing B the system would crash.
 
       prevent this :
         1>  restore the call to the original value sys_open,but this request address of sys_open is have been known
-	2>  use the reference count to prevent root from rmmod the module once it is loaded
-	    (A is referred by B,so reference count is not equal to zero)
-	    (  A ->  B  )
+    2>  use the reference count to prevent root from rmmod the module once it is loaded
+        (A is referred by B,so reference count is not equal to zero)
+        (  A ->  B  )
 
 
 Chapter 8 : Blocking Processes
@@ -441,18 +437,18 @@ Chapter 8 : Blocking Processes
   <linux/wait.h>
     /*  wait_event - sleep until a condition gets true  
      *               this interface will leaves process state in TASK_UNINTERRUPTIBLE
-     *  @wq : the wait queue,it is an object of type struct wait_queue_t.
-     *  @condition : the expected event.
-     *  retunr - no return value.
+     *  @wq:         the wait queue,it is an object of type struct wait_queue_t.
+     *  @condition:  the expected event.
+     *  retunr:      no return value.
      */
     #define wait_event(wq, condition)
 
     /*  wait_event_interruptible - sleep until a condition gets true
      *                             this interface is same as wait_event,but it is interruptible,
      *                             that is leave process state in TASK_INTERRUPTIBLE.
-     *  @wq : wait queue
-     *  @condition : the expected condition
-     *  return - a int value
+     *  @wq:                       wait queue
+     *  @condition:                the expected condition
+     *  return:                    a int value
      */
     #define wait_event_interruptible(wq, condition)
 
@@ -463,10 +459,10 @@ Chapter 8 : Blocking Processes
     struct __wait_queue {
             unsigned int flags;
     #define WQ_FLAG_EXCLUSIVE   0x01
-  	    void *private;
-	    wait_queue_func_t func;
-	    struct list_head task_list;	    
-    }
+            void *private;
+            wait_queue_func_t func;
+            struct list_head task_list;        
+    };
 
     #define wake_up(x)  __wake_up(x, TASK_NORMAL, 1, NULL);
     ...
@@ -497,20 +493,20 @@ Chapter 9 : Replacing printk's
   <linux/tty.h>
     struct tty_struct {
             int magic;
-	    struct kref kref;
-	    struct tty_driver *driver;
-	    const struct tty_operations *ops;
-	    int index;
-	    ...
+            struct kref kref;
+            struct tty_driver *driver;
+            const struct tty_operations *ops;
+            int index;
+            ...
     };
     /*  linux use this struct to represents a tty object  */
 
   <linux/tty_driver.h>
     struct tty_operations {
             struct tty_struct *(*lookup)(struct tty_driver *driver, struct inode *inode, int idx);
-	    ...
-	    int (*write)(struct tty_struct *tty, const unsigned char *buf, int count);
-	    ...
+            ...
+            int (*write)(struct tty_struct *tty, const unsigned char *buf, int count);
+            ...
     };
     /*  this structure does not contains reading function,that is tty is used to output,not a input device  */
 
@@ -529,12 +525,12 @@ Chapter 9 : Replacing printk's
 Chapter 10 : Scheduling Tasks
   for scheduling a task in kernel,there has two possibility ways.
     1>  use crontab daemon.  /*  crond  */
-    	  a process start kernel module via a special way at the certain time.
+          a process start kernel module via a special way at the certain time.
     2>  use workqueue.  /*  such interfaces in the version older than 2.6 is tq_struct  */
           do not need any another process to start task,just put task in a workqueue.
-	  this can not request system executes the work at the certain time,because workqueue
-	  is the mechanism used by interrupting behalf part.
-	  but workqueue allows sleeping and running in process context.(tasklet is different)
+          this can not request system executes the work at the certain time,because workqueue
+          is the mechanism used by interrupting behalf part.
+          but workqueue allows sleeping and running in process context.(tasklet is different)
 
   <linux/workqueue.h>
     struct work_struct;
@@ -547,10 +543,10 @@ Chapter 10 : Scheduling Tasks
     #define WORK_STRUCT_FLAG_MASK (3UL)
     #define WORK_STRUCT_WQ_DATA_MASK (~WORK_STRUCT_FLAG_MASK)
             struct list_head entry;
-	    work_func_t func;
+            work_func_t func;
     #ifdef CONFIG_LOCKDEP
-    	    struct lockdep_map lockdep_map;
-    #endif	    
+            struct lockdep_map lockdep_map;
+    #endif        
     };
 
     /*  every work_struct object represents a unqueue work  */
@@ -559,23 +555,23 @@ Chapter 10 : Scheduling Tasks
   <kernel/workqueue.c>
     struct cpu_workqueue_struct {
             spinlock_t lock;
-	    struct list_head worklist;
-	    wait_queue_head_t more_work;      /*  condition if there has more work is inserted  */
-	    struct work_struct *current_work; /*  current work is ready to running or is running  */
-	    struct workqueue_struct *wq;      /*  associated workqueue  */
-	    struct task_struct *thread;	      /*  the worker thread for executes work  */
+            struct list_head worklist;
+            wait_queue_head_t more_work;      /*  condition if there has more work is inserted  */
+            struct work_struct *current_work; /*  current work is ready to running or is running  */
+            struct workqueue_struct *wq;      /*  associated workqueue  */
+            struct task_struct *thread;          /*  the worker thread for executes work  */
     } ____cacheling_aligned;
 
     struct workqueue_struct {
             struct cpu_workqueue_struct *cpu_wq;  /*  associated cwq  */
-	    struct list_head list;
-	    const char *name;  /*  workqueue name  */
-	    int singlethread;  /*  is the cpu single thread  */
-	    int freezeable;
-	    int rt;
+            struct list_head list;
+            const char *name;  /*  workqueue name  */
+            int singlethread;  /*  is the cpu single thread  */
+            int freezeable;
+            int rt;
     #ifdef CONFIG_LOCKDEP
             struct lockdep_map lockdep_map;
-    #endif	    
+    #endif        
     };
 
     /*  queue_work - queue a work to workqueue
@@ -588,9 +584,9 @@ Chapter 10 : Scheduling Tasks
       procedure >
         queue_work ->
           queue_work_on ->
-	    __queue_work ->
-	      insert_work ->
-	        list_add_tail AND wake_up(&cwq->more_work)
+        __queue_work ->
+          insert_work ->
+            list_add_tail AND wake_up(&cwq->more_work)
 
     /*  __create_workqueue_key - create a workqueue with key
      *  @name : workqueue name.
@@ -603,23 +599,23 @@ Chapter 10 : Scheduling Tasks
      *  return - reutrn a workqueue_struct pointer if succeed,return NULL otherwise.
      */
     struct workqueue_struct *__create_workqueue_key(const char *name, int singlethread, int freezeable, int rt,
-    	   		    			    struct lock_class_key *key, const char *lock_name);
+                                                    struct lock_class_key *key, const char *lock_name);
 
       procedure >
         alloc structure memory -> alloc percpu data ->
-	init lockdep_map -> set field values ->
-	init_cpu_workqueue -> create_workqueue_thread ->
-	start_workqueue_thread
+        init lockdep_map -> set field values ->
+        init_cpu_workqueue -> create_workqueue_thread ->
+        start_workqueue_thread
 
-	init_cpu_workqueue() will init cpu_workqueue_struct.
-	create_workqueue_thread() will create a kernel thread with the function worker_thread defined in
-	<kernel/workqueue.c>,and set cpu_workqueue_struct.thread points to it.
-	start_workqueue_thread() has these codes :
-	  if (p->thread) {
-	          if (cpu >= 0)
-		          kthread_bind(p, cpu);
-	          wake_up_process(p);		  
-	  }
+    init_cpu_workqueue() will init cpu_workqueue_struct.
+    create_workqueue_thread() will create a kernel thread with the function worker_thread defined in
+    <kernel/workqueue.c>,and set cpu_workqueue_struct.thread points to it.
+    start_workqueue_thread() has these codes :
+      if (p->thread) {
+              if (cpu >= 0)
+                  kthread_bind(p, cpu);
+              wake_up_process(p);          
+      }
 
     worker_thread() is a function which process a endless loop(if kthread should not be stop or no schedule() is called),
     and calls run_workqueue().
@@ -643,7 +639,7 @@ Chapter 11 : Interrupt Handlers
   IRQ : hardware interrupt under Unix or Linux.
   there are two types of IRQs :
     1>  a short IRQ is one which is expected to take a very short period of time,during which the rest of the machine will be
-    	blocked and no other interrupts will be handled.
+        blocked and no other interrupts will be handled.
     2>  a long IRQ is one which can take longer,and during which other interrupts may occur(but not interrupts from the same device).
 
   if at all possible,should design long interrupt as well.
@@ -680,29 +676,29 @@ Chapter 11 : Interrupt Handlers
      *  return - return zero if succeed,return non-zero otherwise.
      */
     int __must_check request_irq(unsigned int irq, irq_handler_t handler, unsigned long flags,
-    		                 const char *name, void *dev);
+                                 const char *name, void *dev);
 
     flags :
-      IRQF_DISABLED		keep irqs dsiabled when calling the action handler
-      IRQF_SAMPLE_RANDOM	irq is used to feed the random generator
-      IRQF_SHARED		allow sharing the irq among several devices
-      IRQF_PROBE_SHARED		set by callers when they expect sharing mismatches to occur
-      IRQF_TIMER		flag to mark this interrupt as timer interrupt
-      IRQF_PERCPU		interrupt is per cpu
-      IRQF_NOBALANCING		flag to exclude this interrupt from irq balancing
-      IRQF_IRQPOLL		interrupt is used for polling (only the interrupt that is 
-      				registered first in an shared interrupt is considered for 
-				performance reasons)
-      IRQF_ONESHOT		interrupt is not reenabled after the harding handler finished.
-      				used by threaded interrupts which need to keep the irq line 
-				disabled until the threaded handler has been run.
+      IRQF_DISABLED          keep irqs dsiabled when calling the action handler
+      IRQF_SAMPLE_RANDOM     irq is used to feed the random generator
+      IRQF_SHARED            allow sharing the irq among several devices
+      IRQF_PROBE_SHARED      set by callers when they expect sharing mismatches to occur
+      IRQF_TIMER             flag to mark this interrupt as timer interrupt
+      IRQF_PERCPU            interrupt is per cpu
+      IRQF_NOBALANCING       flag to exclude this interrupt from irq balancing
+      IRQF_IRQPOLL           interrupt is used for polling (only the interrupt that is 
+                             registered first in an shared interrupt is considered for 
+                             performance reasons)
+      IRQF_ONESHOT           interrupt is not reenabled after the harding handler finished.
+                             used by threaded interrupts which need to keep the irq line 
+                             disabled until the threaded handler has been run.
 
-    /*  used by threaded handlers  */				
+    /*  used by threaded handlers  */                
     enum {
             IRQTF_RUNTHREAD,    /*  signals that the interrupt handler thread should run  */
-	    IRQTF_DIED,		/*  handler thread died  */
-	    IRQTF_WARNED,	/*  warning "IRQ_WAKE_THREAD w/o thread_fn" has been printed  */
-	    IRQTF_AFFINITY,	/*  irq thread is requested to adjust affinity  */
+            IRQTF_DIED,        /*  handler thread died  */
+            IRQTF_WARNED,    /*  warning "IRQ_WAKE_THREAD w/o thread_fn" has been printed  */
+            IRQTF_AFFINITY,    /*  irq thread is requested to adjust affinity  */
     };
 
     /*  struct irqaction - per interrupt action descriptor.
@@ -719,16 +715,16 @@ Chapter 11 : Interrupt Handlers
      */
     struct irqaction {
             irq_handler_t handler;
-	    unsigned long flags;
-	    const char *name;
-	    void *dev_id;
-	    struct irqaction *next;
-	    int irq;
-	    struct proc_dir_entry *dir;
-	    irq_handler_t thread_fn;
-	    struct task_struct *thread;
-	    unsigned long thread_flags;
-    };	    
+            unsigned long flags;
+            const char *name;
+            void *dev_id;
+            struct irqaction *next;
+            int irq;
+            struct proc_dir_entry *dir;
+            irq_handler_t thread_fn;
+            struct task_struct *thread;
+            unsigned long thread_flags;
+    };        
     /*  every registed irq will be decribed with a struct irqaction object  */
 
   the general IRQ steps :
@@ -739,16 +735,16 @@ Chapter 11 : Interrupt Handlers
     control hand over to kernel ->
     kernel calls do_IRQ ->
     the irq handler on this irq line would be executed ->  (if the irq line is shared,then 
-    	    	       	    	     	      	       	    every handler will be executed,and each one
-							    must checks whether the irq should be dealt
-							    with by it)
+                                                            every handler will be executed,and each one
+                                                            must checks whether the irq should be dealt
+                                                            with by it)
     handler done some works immediately(top half),
     and arranges BH works,then return to interrupted task ->
     system scheduler schedules bottom half work fro that irq
 
   /*  if a irq is registered,it will be actived as longer until reboot or call free_irq() to free it proactively  */
 
-    	   		    				
+                                       
 Chapter 12 : Symmetrical Multi-Processing(SMP)
   asymmetrical multi-processing effectively requires specialized knowledge about the tasks the computer should do,
   it is more difficult than SMP,and which is unavailable in a general purpose operating system such as Linux.
@@ -764,11 +760,11 @@ Chapter 12 : Symmetrical Multi-Processing(SMP)
 Chapter 13 : Common Pitfalls
   there are some important things have to pay attention while writing a kernel module :
     1>  Using standard libraries.
-    	stdlib is unavailable inside kernel,only exported kernel function is available.
+        stdlib is unavailable inside kernel,only exported kernel function is available.
     2>  disabling interrupts.
         sometimes,might need to disable interrupt for a short time,but must enable them afterwards.
     3>  sticking head inside a large carnivore.
-    	that is,when write a kernel module,must take a care about how does the module affect system.
-	kernel debugging is very difficult and complicated.
+        that is,when write a kernel module,must take a care about how does the module affect system.
+    kernel debugging is very difficult and complicated.
 
 /*  END  */
