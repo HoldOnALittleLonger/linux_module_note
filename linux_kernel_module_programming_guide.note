@@ -122,6 +122,7 @@ Chapter 2 : Character Device Files
     int try_module_get(struct module *);       //  inc module reference count
     void module_put(struct module *module);    //  dec module reference count
 
+    ! we must invoke find_module() inside RCU critical region.
     struct module *find_module(const char *name);      // find a module via module @name.
     unsigned int module_refcount(struct module *mod);  // retrieve module reference count via module pointer.
 
