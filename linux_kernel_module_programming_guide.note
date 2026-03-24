@@ -333,7 +333,7 @@ Chapter 6 : Startup Parameters
 
   in newer version(since 2.6),macro_parm is MACRO_PARM.and has new proto.
     <linux/moduleparam.h>
-    #define macro_parm(name, type, permission)
+    #define module_parm(name, type, permission)
 
     @name is the name of the variable
     @type is the type of the variable
@@ -349,6 +349,29 @@ Chapter 6 : Startup Parameters
 
   /*  under C the object file only has the location of global variables,not their type,
       that is why header files are necessary.  */
+
+  ! in the newer kernel version
+      the standard types :
+        byte, hexint, short, ushort, int, uint, long, ulong
+        charp: a character pointer
+        bool: a bool, values => 0/1, y/n, Y/N
+        invbool: !bool => n/N -> true, y/Y -> false
+    
+      permission :
+        umask such 0644, 0600, ...
+
+  ! the expose macro module_param() should be used follow the global parameter definition.
+    e.g.
+            static char *strp = NULL;
+            module_param(strp, charp, 0600);
+
+            static int intp = 0;
+            module_param(intp, int, 0600);
+
+    !! IF THE PARAMETER'S PERMISSION IS WORLD-RW,THEN MUST INVOKE kernel_param_lock(@module_pointer)
+       TO AVOID RACE CONDITION WHEN WE WANT TO ACCESS IT,AND INVOKE kernel_param_unlock(@module_pointer)
+       TO RELEASE THE LOCK.
+       # USUALLY,WE INVOKE THESE FUNCTIONS WITH THE SEPCIAL VARIABLE "THIS_MODULE".
 
 
 Chapter 7 : System Calls
