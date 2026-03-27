@@ -12,7 +12,10 @@ all: make_help
 
 build:
 	make -C $(KERNEL_DEV_DIR) M=$(PWD) modules
-	$(SIGN_FILE) sha256 $(MODULE_PRIVATE_KEY) $(MODULE_PUBLIC_KEY) $(MODULE_KO)
+	for m in $(MODULE_KO); \
+	do \
+		$(SIGN_FILE) sha256 $(MODULE_PRIVATE_KEY) $(MODULE_PUBLIC_KEY) $$m; \
+	done
 
 make_help:
 	@echo "External variables : "

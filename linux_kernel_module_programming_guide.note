@@ -126,6 +126,8 @@ Chapter 2 : Character Device Files
     struct module *find_module(const char *name);      // find a module via module @name.
     unsigned int module_refcount(struct module *mod);  // retrieve module reference count via module pointer.
 
+    !! FUNCTION find_module() IS NOT EXPORTED,THUS WE CAN NOT SEE IT IN EXTERNAL KERNEL MODULE.
+
     struct module;
       this struct represent the module in kernel.
 
